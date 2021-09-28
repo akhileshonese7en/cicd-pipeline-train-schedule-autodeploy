@@ -1,0 +1,85 @@
+#Deploy the Train schedule app
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mydeployment
+spec:
+  template:
+    metadata:
+      labels: 
+        app: mydeployment
+    spec:
+      containers:
+      - name: project-deployment
+        image: akhileshonese7en/final_project
+        ports:
+        - containerPort: 80
+  selector:
+    matchLabels:
+      app: mydeployment
+  replicas: 3 
+  
+---
+# Expose app to Nodeport
+apiVersion: v1
+kind: Service
+metadata:
+  name: mydeployment
+spec:
+  type: NodePort
+  selector:
+    app: mydeployment
+  ports:
+  - port: 8080
+    targetPort: 3000   
+---
+# Store data of app using PersistentVolumeChain
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 256Mi
+---
+#Start  mongodb service
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+spec:
+  selector:
+    app: mongo
+  ports:
+    - port: 27017
+      targetPort: 27017
+---
+#Deployment of mongo database 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+spec:
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+        - name: mongo
+          image: mongo
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: storage
+              mountPath: /data/db
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: mongo-pvc                 
